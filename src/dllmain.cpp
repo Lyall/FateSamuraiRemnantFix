@@ -46,6 +46,9 @@ bool bFixHUD;
 // Variables
 int iCurrentResX;
 int iCurrentResY;
+std::string sHUDObjectName;
+short iHUDObjectX;
+short iHUDObjectY;
 
 void Logging()
 {
@@ -276,40 +279,48 @@ void HUD()
     // HUD Elements
     std::uint8_t* HUDElementsScanResult = Memory::PatternScan(exeModule, "41 8B ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? 41 ?? 01 00 00 00 89 ?? ?? ?? ?? ?? ??");
     if (HUDElementsScanResult) {
-        static std::string sObjectName;
-        static short iObjectX;
-        static short iObjectY;
-
         spdlog::info("HUD: Elements: Address is {:s}+{:x}", sExeName.c_str(), HUDElementsScanResult - (std::uint8_t*)exeModule);
         static SafetyHookMid HUDElementsMidHook{};
         HUDElementsMidHook = safetyhook::create_mid(HUDElementsScanResult + 0x5,
             [](SafetyHookContext& ctx) {
                 if (ctx.r12) {
-                    sObjectName = (char*)ctx.r12;
-                    iObjectX = *reinterpret_cast<short*>(ctx.r12 + 0x60);
-                    iObjectY = *reinterpret_cast<short*>(ctx.r12 + 0x62);
+                    sHUDObjectName = (char*)ctx.r12;
+                    iHUDObjectX = *reinterpret_cast<short*>(ctx.r12 + 0x60);
+                    iHUDObjectY = *reinterpret_cast<short*>(ctx.r12 + 0x62);
 
-                    
-                    // Fades
-                    if (iObjectX == 1922 && iObjectY == 1082) {
+                    // Base Background
+                    if (iHUDObjectX == 2600 && sHUDObjectName.contains("WIN_base_system_bg")) {
                         #ifdef _DEBUG
-                        spdlog::info("Fade: sObjectName = {:x} - {} - {}x{}", ctx.r12, sObjectName, iObjectX, iObjectY);
+                        spdlog::info("Base BG: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                         #endif
                         if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iObjectY) << 16) | (short)ceilf(iObjectX * fAspectMultiplier);
+                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1463 * fAspectRatio);
                         }
                         else if (fAspectRatio < fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>((short)ceilf(iObjectX / fAspectRatio) << 16) | iObjectX);
+                            ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio)) << 16) | iHUDObjectX;
+                        }
+                    }
+
+                    // Fades
+                    if (iHUDObjectX == 1922 && iHUDObjectY == 1082) {
+                        #ifdef _DEBUG
+                        spdlog::info("Fade: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                        #endif
+                        if (fAspectRatio > fNativeAspect) {
+                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
+                        }
+                        else if (fAspectRatio < fNativeAspect) {
+                            ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio) << 16) | iHUDObjectX);
                         }
                     }
                     
                     // Menu letterboxing
-                    if (iObjectX == 1920 && sObjectName.contains("PIC_square_w")) {
+                    if (iHUDObjectX == 1920 && sHUDObjectName.contains("PIC_square_w")) {
                         #ifdef _DEBUG
-                        spdlog::info("Menu Letterboxing: sObjectName = {:x} - {} - {}x{}", ctx.r12, sObjectName, iObjectX, iObjectY);
+                        spdlog::info("Menu Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                         #endif
                         if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iObjectY) << 16) | (short)ceilf(iObjectX * fAspectMultiplier);
+                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
                         }
                         else if (fAspectRatio < fNativeAspect) {
                             // TODO
@@ -317,17 +328,30 @@ void HUD()
                     }
 
                     // Cutscene letterboxing
-                    if (sObjectName.contains("letterbox") && iObjectX >= 1920) {
+                    if (sHUDObjectName.contains("letterbox") && iHUDObjectX >= 1920) {
                         #ifdef _DEBUG
-                        spdlog::info("Letterboxing: sObjectName = {:x} - {} - {}x{}", ctx.r12, sObjectName, iObjectX, iObjectY);
+                        spdlog::info("Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                         #endif
                         if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iObjectY) << 16) | (short)ceilf(iObjectX * fAspectMultiplier);
+                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
                         }
                         else if (fAspectRatio < fNativeAspect) {
                             // TODO
                         }
-                    }                 
+                    }  
+
+                    // Gradient background
+                    if (iHUDObjectX == 2880 && sHUDObjectName.contains("PIC_bottomGradation")) {
+                        #ifdef _DEBUG
+                        spdlog::info("Gradient Background: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                        #endif
+                        if (fAspectRatio > fNativeAspect) {
+                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1620 * fAspectRatio);
+                        }
+                        else if (fAspectRatio < fNativeAspect) {
+                            // TODO
+                        }
+                    }
                 }
             });
     }

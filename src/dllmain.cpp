@@ -296,8 +296,11 @@ void HUD()
                         if (sHUDObjectName.contains("capture_plane_full_rgba8") && !MovieCapturePlane)
                             MovieCapturePlane = (std::uint8_t*)ctx.r12;
 
-                        // Resize all non-movie capture planes
+                        // Non-movie capture planes
                         if (sHUDObjectName.contains("capture_plane_full_rgba8") && (std::uint8_t*)ctx.r12 != MovieCapturePlane) {
+                            #ifdef _DEBUG
+                            spdlog::info("HUD Objects: Capture Plane: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
                             if (fAspectRatio > fNativeAspect) {
                                 ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectY * fAspectRatio);
                             }
@@ -306,10 +309,20 @@ void HUD()
                             }
                         }
 
-                        // Base Background
+                        // Pause menu
+                        if (sHUDObjectName.contains("PIC_common_square_bl") || sHUDObjectName.contains("PIC_parts_header_bg_tab")) {
+                            #ifdef _DEBUG
+                            spdlog::info("HUD Objects: Pause Menu: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
+                            }
+                        }
+
+                        // Base background
                         if (iHUDObjectX == 2600 && sHUDObjectName.contains("WIN_base_system_bg")) {
                             #ifdef _DEBUG
-                            spdlog::info("Base BG: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            spdlog::info("HUD Objects: Base BG: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                             #endif
                             if (fAspectRatio > fNativeAspect) {
                                 ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1463 * fAspectRatio);
@@ -319,10 +332,10 @@ void HUD()
                             }
                         }
 
-                        // Fades
-                        if (iHUDObjectX == 1922 && iHUDObjectY == 1082) {
+                        // Fades/masks
+                        if ((sHUDObjectName.contains("PIC_bg_rect_window") || sHUDObjectName.contains("PIC_mask_bg") || sHUDObjectName.contains("PIC_square_w")) && iHUDObjectX > 1920 && iHUDObjectY > 1080) {
                             #ifdef _DEBUG
-                            spdlog::info("Fade: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            spdlog::info("HUD Objects: Fades: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                             #endif
                             if (fAspectRatio > fNativeAspect) {
                                 ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
@@ -335,7 +348,7 @@ void HUD()
                         // Menu letterboxing
                         if (iHUDObjectX == 1920 && sHUDObjectName.contains("PIC_square_w")) {
                             #ifdef _DEBUG
-                            spdlog::info("Menu Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            spdlog::info("HUD Objects: Menu Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                             #endif
                             if (fAspectRatio > fNativeAspect) {
                                 ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
@@ -345,7 +358,7 @@ void HUD()
                         // Cutscene letterboxing
                         if (sHUDObjectName.contains("letterbox") && iHUDObjectX >= 1920) {
                             #ifdef _DEBUG
-                            spdlog::info("Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            spdlog::info("HUD Objects: Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                             #endif
                             if (fAspectRatio > fNativeAspect) {
                                 ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
@@ -355,7 +368,7 @@ void HUD()
                         // Gradient background
                         if (iHUDObjectX == 2880 && sHUDObjectName.contains("PIC_bottomGradation")) {
                             #ifdef _DEBUG
-                            spdlog::info("Gradient Background: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            spdlog::info("HUD Objects: Gradient Background: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                             #endif
                             if (fAspectRatio > fNativeAspect) {
                                 ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1620 * fAspectRatio);

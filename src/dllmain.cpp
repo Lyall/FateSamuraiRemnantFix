@@ -49,6 +49,7 @@ int iCurrentResY;
 std::string sHUDObjectName;
 short iHUDObjectX;
 short iHUDObjectY;
+std::uint8_t* MovieCapturePlane = nullptr;
 
 void Logging()
 {
@@ -280,6 +281,8 @@ void HUD()
         // HUD Objects
         std::uint8_t* HUDObjectsScanResult = Memory::PatternScan(exeModule, "41 8B ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? 41 ?? 01 00 00 00 89 ?? ?? ?? ?? ?? ??");
         if (HUDObjectsScanResult) {
+            static int iCapCount = 0;
+
             spdlog::info("HUD: Objects: Address is {:s}+{:x}", sExeName.c_str(), HUDObjectsScanResult - (std::uint8_t*)exeModule);
             static SafetyHookMid HUDObjectsMidHook{};
             HUDObjectsMidHook = safetyhook::create_mid(HUDObjectsScanResult + 0x5,
@@ -288,6 +291,20 @@ void HUD()
                         sHUDObjectName = (char*)ctx.r12;
                         iHUDObjectX = *reinterpret_cast<short*>(ctx.r12 + 0x60);
                         iHUDObjectY = *reinterpret_cast<short*>(ctx.r12 + 0x62);
+
+                        // Grab capture plane for movies, luckily it's always the first one
+                        if (sHUDObjectName.contains("capture_plane_full_rgba8") && !MovieCapturePlane)
+                            MovieCapturePlane = (std::uint8_t*)ctx.r12;
+
+                        // Resize all non-movie capture planes
+                        if (sHUDObjectName.contains("capture_plane_full_rgba8") && (std::uint8_t*)ctx.r12 != MovieCapturePlane) {
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectY * fAspectRatio);
+                            }
+                            else if (fAspectRatio < fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio)) << 16) | iHUDObjectX;
+                            }
+                        }
 
                         // Base Background
                         if (iHUDObjectX == 2600 && sHUDObjectName.contains("WIN_base_system_bg")) {

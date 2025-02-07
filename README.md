@@ -7,7 +7,7 @@ This is an ASI plugin for Fate/Samurai Remnant that adds support for custom reso
 ## Features
 
 - Custom resolutions.
-- Ultrawide.
+- Ultrawide support with 16:9 HUD.
 
 ## Installation
 - Grab the latest release of FateSamuraiRemnantFix from [here.](https://github.com/Lyall/FateSamuraiRemnantFix/releases)
@@ -23,9 +23,13 @@ e.g. ("**steamapps\common\FateSamuraiRemnant**" for Steam).
 
 ## Screenshots
 
-| |
+| ![ezgif-2b6f871c92e43](https://github.com/user-attachments/assets/a2d5d107-a170-45c7-9408-26f8f3bf70aa) |
 |:--------------------------:|
 | Gameplay |
+
+| ![ezgif-49bf752543da6](https://github.com/user-attachments/assets/689d369d-4a74-4cd7-b003-22284dd0d418) |
+|:--------------------------:|
+| Cutscene |
 
 ## Known Issues
 Please report any issues you see.

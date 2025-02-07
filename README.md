@@ -2,11 +2,12 @@
 [![Patreon-Button](https://raw.githubusercontent.com/Lyall/FateSamuraiRemnantFix/refs/heads/master/.github/Patreon-Button.png)](https://www.patreon.com/Wintermance) [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/W7W01UAI9)<br />
 [![Github All Releases](https://img.shields.io/github/downloads/Lyall/FateSamuraiRemnantFix/total.svg)](https://github.com/Lyall/FateSamuraiRemnantFix/releases)
 
-This is an ASI plugin for Fate/Samurai Remnant that adds ultrawide/narrower support.
+This is an ASI plugin for Fate/Samurai Remnant that adds support for custom resolutions and ultrawide.
 
 ## Features
 
-- Support for ultrawide/narrower resolutions.
+- Custom resolutions.
+- Ultrawide.
 
 ## Installation
 - Grab the latest release of FateSamuraiRemnantFix from [here.](https://github.com/Lyall/FateSamuraiRemnantFix/releases)

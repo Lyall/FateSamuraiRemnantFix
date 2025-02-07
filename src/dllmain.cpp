@@ -195,168 +195,161 @@ void Resolution()
 
 void HUD()
 {
-    // HUD Size 
-    std::uint8_t* HUDSizeScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? 48 83 ?? ?? E8 ?? ?? ?? ??");
-    std::uint8_t* StartupHUDSizeScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ?? 48 8B ?? E8 ?? ?? ?? ??");
-    if (HUDSizeScanResult) {
-        spdlog::info("HUD: Size: Address is {:s}+{:x}", sExeName.c_str(), HUDSizeScanResult - (std::uint8_t*)exeModule);
-        spdlog::info("HUD: Size: Startup: Address is {:s}+{:x}", sExeName.c_str(), StartupHUDSizeScanResult - (std::uint8_t*)exeModule);
+    if (bFixHUD) {
+        // HUD Size 
+        std::uint8_t* HUDSizeScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? 48 83 ?? ?? E8 ?? ?? ?? ??");
+        std::uint8_t* StartupHUDSizeScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ?? 48 8B ?? E8 ?? ?? ?? ??");
+        if (HUDSizeScanResult) {
+            spdlog::info("HUD: Size: Address is {:s}+{:x}", sExeName.c_str(), HUDSizeScanResult - (std::uint8_t*)exeModule);
+            spdlog::info("HUD: Size: Startup: Address is {:s}+{:x}", sExeName.c_str(), StartupHUDSizeScanResult - (std::uint8_t*)exeModule);
 
-        // Get HUD X and HUD Y
-        static std::uint8_t* HUDSizeXAddr = Memory::GetAbsolute(StartupHUDSizeScanResult + 0xC);
-        static std::uint8_t* HUDSizeYAddr = Memory::GetAbsolute(StartupHUDSizeScanResult + 0x4);
+            // Get HUD X and HUD Y
+            static std::uint8_t* HUDSizeXAddr = Memory::GetAbsolute(StartupHUDSizeScanResult + 0xC);
+            static std::uint8_t* HUDSizeYAddr = Memory::GetAbsolute(StartupHUDSizeScanResult + 0x4);
 
-        auto HUDSizeMidHook = [](SafetyHookContext& ctx) {
-            // Write defaults
-            Memory::Write(HUDSizeXAddr, 1920.00f);
-            Memory::Write(HUDSizeYAddr, 1080.00f);
-
-            ctx.xmm6.f32[0] = 1080.00f;
-            ctx.xmm7.f32[0] = 1920.00f;
-
-            int iResX = static_cast<int>(ctx.xmm0.f32[0]);
-            int iResY = static_cast<int>(ctx.xmm1.f32[0]);
-
-            // Log resolution
-            if (iResX != iCurrentResX || iResY != iCurrentResY) {
-                iCurrentResX = iResX;
-                iCurrentResY = iResY;
-                CalculateAspectRatio(true);
-            }
-
-            if (fAspectRatio > fNativeAspect) {
-                Memory::Write(HUDSizeXAddr, 1080.00f * fAspectRatio);
+            auto HUDSizeMidHook = [](SafetyHookContext& ctx) {
+                // Write defaults
+                Memory::Write(HUDSizeXAddr, 1920.00f);
                 Memory::Write(HUDSizeYAddr, 1080.00f);
 
-                ctx.xmm7.f32[0] = 1080.00f * fAspectRatio;
                 ctx.xmm6.f32[0] = 1080.00f;
-            } 
-            else if (fAspectRatio < fNativeAspect) {
-                Memory::Write(HUDSizeXAddr, 1920.00f);
-                Memory::Write(HUDSizeYAddr, 1920.00f / fAspectRatio);
-
                 ctx.xmm7.f32[0] = 1920.00f;
-                ctx.xmm6.f32[0] = 1920.00f / fAspectRatio;
-            }
-        };
 
-        // Apply hooks
-        static SafetyHookMid HUDSizeHook = safetyhook::create_mid(HUDSizeScanResult, HUDSizeMidHook);
-        static SafetyHookMid StartupHUDSizeHook = safetyhook::create_mid(StartupHUDSizeScanResult, HUDSizeMidHook);
-    }
-    else {
-        spdlog::error("HUD: Size: Pattern scan failed.");
-    }
+                int iResX = static_cast<int>(ctx.xmm0.f32[0]);
+                int iResY = static_cast<int>(ctx.xmm1.f32[0]);
 
-    // Health Bars 
-    std::uint8_t* HealthBars1ScanResult = Memory::PatternScan(exeModule, "0F 29 ?? ?? ?? 48 8B ?? ?? ?? 48 83 ?? ?? 74 ?? F3 0F ?? ?? ?? ?? ?? ?? 0F ?? ?? 77 ??");
-    std::uint8_t* HealthBars2ScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? F3 0F ?? ?? 66 0F ?? ?? ?? 0F ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ?? 84 ?? 74 ??");
-    if (HealthBars1ScanResult && HealthBars2ScanResult) {
-        spdlog::info("HUD: Health Bars: 1: Address is {:s}+{:x}", sExeName.c_str(), HealthBars1ScanResult - (std::uint8_t*)exeModule);
-        static SafetyHookMid HealthBars1MidHook{};
-        HealthBars1MidHook = safetyhook::create_mid(HealthBars1ScanResult,
-            [](SafetyHookContext& ctx) {
-                if (fAspectRatio > fNativeAspect)
-                    ctx.xmm6.f32[0] = 1920.00f;
-                else if (fAspectRatio < fNativeAspect)
-                    ctx.xmm5.f32[0] = 1080.00f;
-            });
-
-        spdlog::info("HUD: Health Bars: 2: Address is {:s}+{:x}", sExeName.c_str(), HealthBars2ScanResult - (std::uint8_t*)exeModule);
-        static SafetyHookMid HealthBars2MidHook{};
-        HealthBars2MidHook = safetyhook::create_mid(HealthBars2ScanResult,
-            [](SafetyHookContext& ctx) {
-                if (fAspectRatio > fNativeAspect)
-                    ctx.xmm3.f32[0] += ((1080.00f * fAspectRatio) - 1920.00f) / 2.00f;
-                else if (fAspectRatio < fNativeAspect)
-                    ctx.xmm4.f32[0] += ((1920.00f / fAspectRatio) - 1080.00f) / 2.00f;
-            });
-    }
-    else {
-        spdlog::error("HUD: Health Bars: Pattern scan(s) failed.");
-    }
-
-    // HUD Elements
-    std::uint8_t* HUDElementsScanResult = Memory::PatternScan(exeModule, "41 8B ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? 41 ?? 01 00 00 00 89 ?? ?? ?? ?? ?? ??");
-    if (HUDElementsScanResult) {
-        spdlog::info("HUD: Elements: Address is {:s}+{:x}", sExeName.c_str(), HUDElementsScanResult - (std::uint8_t*)exeModule);
-        static SafetyHookMid HUDElementsMidHook{};
-        HUDElementsMidHook = safetyhook::create_mid(HUDElementsScanResult + 0x5,
-            [](SafetyHookContext& ctx) {
-                if (ctx.r12) {
-                    sHUDObjectName = (char*)ctx.r12;
-                    iHUDObjectX = *reinterpret_cast<short*>(ctx.r12 + 0x60);
-                    iHUDObjectY = *reinterpret_cast<short*>(ctx.r12 + 0x62);
-
-                    // Base Background
-                    if (iHUDObjectX == 2600 && sHUDObjectName.contains("WIN_base_system_bg")) {
-                        #ifdef _DEBUG
-                        spdlog::info("Base BG: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
-                        #endif
-                        if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1463 * fAspectRatio);
-                        }
-                        else if (fAspectRatio < fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio)) << 16) | iHUDObjectX;
-                        }
-                    }
-
-                    // Fades
-                    if (iHUDObjectX == 1922 && iHUDObjectY == 1082) {
-                        #ifdef _DEBUG
-                        spdlog::info("Fade: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
-                        #endif
-                        if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
-                        }
-                        else if (fAspectRatio < fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio) << 16) | iHUDObjectX);
-                        }
-                    }
-                    
-                    // Menu letterboxing
-                    if (iHUDObjectX == 1920 && sHUDObjectName.contains("PIC_square_w")) {
-                        #ifdef _DEBUG
-                        spdlog::info("Menu Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
-                        #endif
-                        if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
-                        }
-                        else if (fAspectRatio < fNativeAspect) {
-                            // TODO
-                        }
-                    }
-
-                    // Cutscene letterboxing
-                    if (sHUDObjectName.contains("letterbox") && iHUDObjectX >= 1920) {
-                        #ifdef _DEBUG
-                        spdlog::info("Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
-                        #endif
-                        if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
-                        }
-                        else if (fAspectRatio < fNativeAspect) {
-                            // TODO
-                        }
-                    }  
-
-                    // Gradient background
-                    if (iHUDObjectX == 2880 && sHUDObjectName.contains("PIC_bottomGradation")) {
-                        #ifdef _DEBUG
-                        spdlog::info("Gradient Background: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
-                        #endif
-                        if (fAspectRatio > fNativeAspect) {
-                            ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1620 * fAspectRatio);
-                        }
-                        else if (fAspectRatio < fNativeAspect) {
-                            // TODO
-                        }
-                    }
+                // Log resolution
+                if (iResX != iCurrentResX || iResY != iCurrentResY) {
+                    iCurrentResX = iResX;
+                    iCurrentResY = iResY;
+                    CalculateAspectRatio(true);
                 }
-            });
-    }
-    else {
-        spdlog::error("HUD Elements: Pattern scan failed.");
+
+                if (fAspectRatio > fNativeAspect) {
+                    Memory::Write(HUDSizeXAddr, 1080.00f * fAspectRatio);
+                    Memory::Write(HUDSizeYAddr, 1080.00f);
+
+                    ctx.xmm7.f32[0] = 1080.00f * fAspectRatio;
+                    ctx.xmm6.f32[0] = 1080.00f;
+                }
+                else if (fAspectRatio < fNativeAspect) {
+                    Memory::Write(HUDSizeXAddr, 1920.00f);
+                    Memory::Write(HUDSizeYAddr, 1920.00f / fAspectRatio);
+
+                    ctx.xmm7.f32[0] = 1920.00f;
+                    ctx.xmm6.f32[0] = 1920.00f / fAspectRatio;
+                }
+                };
+
+            // Apply hooks
+            static SafetyHookMid HUDSizeHook = safetyhook::create_mid(HUDSizeScanResult, HUDSizeMidHook);
+            static SafetyHookMid StartupHUDSizeHook = safetyhook::create_mid(StartupHUDSizeScanResult, HUDSizeMidHook);
+        }
+        else {
+            spdlog::error("HUD: Size: Pattern scan failed.");
+        }
+
+        // Health Bars 
+        std::uint8_t* HealthBars1ScanResult = Memory::PatternScan(exeModule, "0F 29 ?? ?? ?? 48 8B ?? ?? ?? 48 83 ?? ?? 74 ?? F3 0F ?? ?? ?? ?? ?? ?? 0F ?? ?? 77 ??");
+        std::uint8_t* HealthBars2ScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? F3 0F ?? ?? 66 0F ?? ?? ?? 0F ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ?? 84 ?? 74 ??");
+        if (HealthBars1ScanResult && HealthBars2ScanResult) {
+            spdlog::info("HUD: Health Bars: 1: Address is {:s}+{:x}", sExeName.c_str(), HealthBars1ScanResult - (std::uint8_t*)exeModule);
+            static SafetyHookMid HealthBars1MidHook{};
+            HealthBars1MidHook = safetyhook::create_mid(HealthBars1ScanResult,
+                [](SafetyHookContext& ctx) {
+                    if (fAspectRatio > fNativeAspect)
+                        ctx.xmm6.f32[0] = 1920.00f;
+                    else if (fAspectRatio < fNativeAspect)
+                        ctx.xmm5.f32[0] = 1080.00f;
+                });
+
+            spdlog::info("HUD: Health Bars: 2: Address is {:s}+{:x}", sExeName.c_str(), HealthBars2ScanResult - (std::uint8_t*)exeModule);
+            static SafetyHookMid HealthBars2MidHook{};
+            HealthBars2MidHook = safetyhook::create_mid(HealthBars2ScanResult,
+                [](SafetyHookContext& ctx) {
+                    if (fAspectRatio > fNativeAspect)
+                        ctx.xmm3.f32[0] += ((1080.00f * fAspectRatio) - 1920.00f) / 2.00f;
+                    else if (fAspectRatio < fNativeAspect)
+                        ctx.xmm4.f32[0] += ((1920.00f / fAspectRatio) - 1080.00f) / 2.00f;
+                });
+        }
+        else {
+            spdlog::error("HUD: Health Bars: Pattern scan(s) failed.");
+        }
+
+        // HUD Objects
+        std::uint8_t* HUDObjectsScanResult = Memory::PatternScan(exeModule, "41 8B ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? 41 ?? 01 00 00 00 89 ?? ?? ?? ?? ?? ??");
+        if (HUDObjectsScanResult) {
+            spdlog::info("HUD: Objects: Address is {:s}+{:x}", sExeName.c_str(), HUDObjectsScanResult - (std::uint8_t*)exeModule);
+            static SafetyHookMid HUDObjectsMidHook{};
+            HUDObjectsMidHook = safetyhook::create_mid(HUDObjectsScanResult + 0x5,
+                [](SafetyHookContext& ctx) {
+                    if (ctx.r12) {
+                        sHUDObjectName = (char*)ctx.r12;
+                        iHUDObjectX = *reinterpret_cast<short*>(ctx.r12 + 0x60);
+                        iHUDObjectY = *reinterpret_cast<short*>(ctx.r12 + 0x62);
+
+                        // Base Background
+                        if (iHUDObjectX == 2600 && sHUDObjectName.contains("WIN_base_system_bg")) {
+                            #ifdef _DEBUG
+                            spdlog::info("Base BG: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1463 * fAspectRatio);
+                            }
+                            else if (fAspectRatio < fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio)) << 16) | iHUDObjectX;
+                            }
+                        }
+
+                        // Fades
+                        if (iHUDObjectX == 1922 && iHUDObjectY == 1082) {
+                            #ifdef _DEBUG
+                            spdlog::info("Fade: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
+                            }
+                            else if (fAspectRatio < fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio) << 16) | iHUDObjectX);
+                            }
+                        }
+
+                        // Menu letterboxing
+                        if (iHUDObjectX == 1920 && sHUDObjectName.contains("PIC_square_w")) {
+                            #ifdef _DEBUG
+                            spdlog::info("Menu Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
+                            }
+                        }
+
+                        // Cutscene letterboxing
+                        if (sHUDObjectName.contains("letterbox") && iHUDObjectX >= 1920) {
+                            #ifdef _DEBUG
+                            spdlog::info("Letterboxing: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
+                            }
+                        }
+
+                        // Gradient background
+                        if (iHUDObjectX == 2880 && sHUDObjectName.contains("PIC_bottomGradation")) {
+                            #ifdef _DEBUG
+                            spdlog::info("Gradient Background: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(1620 * fAspectRatio);
+                            }
+                        }
+                    }
+                });
+        }
+        else {
+            spdlog::error("HUD Objects: Pattern scan failed.");
+        }
     }
 }
 

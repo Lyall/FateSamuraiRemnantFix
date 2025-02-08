@@ -191,6 +191,29 @@ void Resolution()
         else {
             spdlog::error("Resolution List: Pattern scan failed.");
         }
+
+        // Resolution string
+        std::uint8_t* ResolutionStringScanResult = Memory::PatternScan(exeModule, "48 8B ?? 45 33 ?? 4D ?? ?? 49 ?? ?? 41 ?? ?? ?? E8 ?? ?? ?? ?? 45 33 ??");
+        if (ResolutionStringScanResult) {
+            spdlog::info("Resolution String: Address is {:s}+{:x}", sExeName.c_str(), ResolutionStringScanResult - (std::uint8_t*)exeModule);
+            static SafetyHookMid ResolutionStringMidHook{};
+            ResolutionStringMidHook = safetyhook::create_mid(ResolutionStringScanResult,
+                [](SafetyHookContext& ctx) {
+                    const std::string oldRes = "3840x2160";
+                    std::string newRes = std::to_string(iCustomResX) + "x" + std::to_string(iCustomResY);
+
+                    char* currentString = (char*)ctx.rax;
+                    if (strncmp(currentString, oldRes.c_str(), oldRes.size()) == 0) {
+                        if (newRes.size() <= oldRes.size()) {
+                            std::memcpy(currentString, newRes.c_str(), newRes.size() + 1);
+                            spdlog::info("Resolution String: Replaced 3840x2160 with {}", newRes);
+                        }
+                    }
+                });
+        }
+        else {
+            spdlog::error("Resolution String: Pattern scan failed.");
+        }
     }
 }
 

@@ -301,6 +301,28 @@ void HUD()
             spdlog::error("HUD: Health Bars: Pattern scan(s) failed.");
         }
 
+        // Floating Markers
+        std::uint8_t* FloatingMarkersScanResult = Memory::PatternScan(exeModule, "F3 0F ?? ?? 66 0F ?? ?? ?? 0F ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ??");
+        if (FloatingMarkersScanResult) {
+            spdlog::info("HUD: Floating Markers: Address is {:s}+{:x}", sExeName.c_str(), FloatingMarkersScanResult - (std::uint8_t*)exeModule);
+            static SafetyHookMid FloatingMarkersHorMidHook{};
+            FloatingMarkersHorMidHook = safetyhook::create_mid(FloatingMarkersScanResult,
+                [](SafetyHookContext& ctx) {
+                    if (fAspectRatio > fNativeAspect)
+                        ctx.xmm0.f32[0] += fHUDWidthOffset;
+                });
+
+            static SafetyHookMid FloatingMarkersVertMidHook{};
+            FloatingMarkersVertMidHook = safetyhook::create_mid(FloatingMarkersScanResult + 0x18,
+                [](SafetyHookContext& ctx) {
+                    if (fAspectRatio < fNativeAspect)
+                        ctx.xmm0.f32[0] += fHUDHeightOffset;
+                });
+        }
+        else {
+            spdlog::error("HUD: Floating Markers: Pattern scan failed.");
+        }      
+
         // HUD Objects
         std::uint8_t* HUDObjectsScanResult = Memory::PatternScan(exeModule, "41 8B ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? 41 ?? 01 00 00 00 89 ?? ?? ?? ?? ?? ??");
         if (HUDObjectsScanResult) {
@@ -331,6 +353,16 @@ void HUD()
                                 ctx.rax = (static_cast<uintptr_t>((short)ceilf(iHUDObjectX / fAspectRatio)) << 16) | iHUDObjectX;
                             }
                         }
+
+                        // Map
+                        if (sHUDObjectName.contains("bg_strategy_book") && (iHUDObjectX == 1920 && iHUDObjectY == 1080) || sHUDObjectName.contains("PIC_gra") && (iHUDObjectX == 1920 && iHUDObjectY == 108) || sHUDObjectName.contains("parts_book_top_frame_01") && (iHUDObjectX == 1920 && iHUDObjectY == 1080) || sHUDObjectName.contains("parts_book_top_frame_02")) {
+                            #ifdef _DEBUG
+                            spdlog::info("HUD Objects: Map: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (fAspectRatio > fNativeAspect) {
+                                ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(iHUDObjectX * fAspectMultiplier);
+                            }
+                        }                       
 
                         // Damage frame
                         if (sHUDObjectName.contains("PIC_bg_frame_damage_")) {

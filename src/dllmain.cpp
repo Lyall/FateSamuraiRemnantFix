@@ -332,6 +332,25 @@ void HUD()
                             }
                         }
 
+                        // Damage frame
+                        if (sHUDObjectName.contains("PIC_bg_frame_damage_")) {
+                            #ifdef _DEBUG
+                            spdlog::info("HUD Objects: Damage Frame: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
+                            #endif
+                            if (sHUDObjectName.contains("PIC_bg_frame_damage_l")) {
+                                if (fAspectRatio > fNativeAspect) {
+                                    ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(540.00f * fAspectRatio);
+                                    *reinterpret_cast<float*>(ctx.r12 + 0x50) = -ceilf(540.00f * fAspectRatio);
+                                }
+                            }
+                            else if (sHUDObjectName.contains("PIC_bg_frame_damage_r")) {
+                                if (fAspectRatio > fNativeAspect) {
+                                    ctx.rax = (static_cast<uintptr_t>(iHUDObjectY) << 16) | (short)ceilf(540.00f * fAspectRatio);
+                                    *reinterpret_cast<float*>(ctx.r12 + 0x50) = ceilf(540.00f * fAspectRatio);
+                                }
+                            }
+                        }
+
                         // Pause menu
                         if (sHUDObjectName.contains("PIC_common_square_bl") || sHUDObjectName.contains("PIC_parts_header_bg_tab")) {
                             #ifdef _DEBUG
@@ -356,7 +375,7 @@ void HUD()
                         }
 
                         // Fades/masks
-                        if ((sHUDObjectName.contains("PIC_bg_rect_window") || sHUDObjectName.contains("PIC_mask_bg") || sHUDObjectName.contains("PIC_square_w")) && iHUDObjectX > 1920 && iHUDObjectY > 1080) {
+                        if ((sHUDObjectName.contains("PIC_bg_rect_window") || sHUDObjectName.contains("PIC_mask_bg") || sHUDObjectName.contains("PIC_square_w") || sHUDObjectName.contains("PIC_black")) && iHUDObjectX >= 1920 && iHUDObjectY >= 1080) {
                             #ifdef _DEBUG
                             spdlog::info("HUD Objects: Fades: sHUDObjectName = {:x} - {} - {}x{}", ctx.r12, sHUDObjectName, iHUDObjectX, iHUDObjectY);
                             #endif

@@ -68,21 +68,57 @@ namespace Memory
     }
 
     std::uint8_t* MultiPatternScan(void* module, const std::vector<const char*>& signatures) 
-    {
-        for (const auto& signature : signatures) {
-            if (std::uint8_t* result = PatternScan(module, signature)) {
+    { 
+        for (const auto& signature : signatures) 
+        {
+            std::uint8_t* result = PatternScan(module, signature);
+            if (result)
                 return result;
-            }
         }
         return nullptr;
     }
 
-    static HMODULE GetThisDllHandle()
+    std::vector<std::uint8_t*> PatternScanAll(void* module, const char* signature)
     {
-        MEMORY_BASIC_INFORMATION info;
-        size_t len = VirtualQueryEx(GetCurrentProcess(), (void*)GetThisDllHandle, &info, sizeof(info));
-        assert(len == sizeof(info));
-        return len ? (HMODULE)info.AllocationBase : NULL;
+        auto dosHeader = (PIMAGE_DOS_HEADER)module;
+        auto ntHeaders = (PIMAGE_NT_HEADERS)((std::uint8_t*)module + dosHeader->e_lfanew);
+    
+        auto sizeOfImage = ntHeaders->OptionalHeader.SizeOfImage;
+        auto patternBytes = pattern_to_byte(signature);
+        auto scanBytes = reinterpret_cast<std::uint8_t*>(module);
+    
+        auto s = patternBytes.size();
+        auto d = patternBytes.data();
+    
+        std::vector<std::uint8_t*> results;
+    
+        for (auto i = 0ul; i < sizeOfImage - s; ++i) {
+            bool found = true;
+            for (auto j = 0ul; j < s; ++j) {
+                if (scanBytes[i + j] != d[j] && d[j] != -1) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                results.push_back(&scanBytes[i]);
+            }
+        }
+    
+        return results;
+    }
+
+    std::vector<std::uint8_t*> MultiPatternScanAll(void* module, const std::vector<const char*>& signatures) 
+    {
+        std::vector<std::uint8_t*> results;
+        
+        for (const auto& signature : signatures) 
+        {
+            auto matches = PatternScanAll(module, signature);
+            results.insert(results.end(), matches.begin(), matches.end());
+        }
+
+        return results;
     }
 
     std::uint32_t ModuleTimestamp(void* module)
@@ -142,14 +178,6 @@ namespace Memory
 
 namespace Util
 {
-    std::pair<int, int> GetPhysicalDesktopDimensions() 
-    {
-        if (DEVMODE devMode{ .dmSize = sizeof(DEVMODE) }; EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devMode))
-            return { devMode.dmPelsWidth, devMode.dmPelsHeight };
-
-        return {};
-    }
-
     std::string wstring_to_string(const std::wstring& wstr) 
     {
         if (wstr.empty()) return {};
@@ -165,7 +193,7 @@ namespace Util
         return wstr ? wstring_to_string(std::wstring(wstr)) : std::string{};
     }
 
-    bool stringcmp_caseless(const std::string& str1, const std::string& str2) 
+    bool string_cmp_caseless(const std::string& str1, const std::string& str2) 
     {
         if (str1.size() != str2.size()) {
             return false;

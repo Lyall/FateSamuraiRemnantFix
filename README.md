@@ -35,6 +35,7 @@ e.g. ("**steamapps\common\FateSamuraiRemnant**" for Steam).
 Please report any issues you see.
 
 ## Credits
+Special thanks to Hotiraripha & Tater-Tatsumi for providing a copy of the game and commissioning the fix! <br?>
 [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) for ASI loading. <br />
 [spdlog](https://github.com/gabime/spdlog) for logging. <br />
 [safetyhook](https://github.com/cursey/safetyhook) for hooking.

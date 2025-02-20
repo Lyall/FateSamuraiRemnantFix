@@ -178,6 +178,14 @@ namespace Memory
 
 namespace Util
 {
+    std::pair<int, int> GetPhysicalDesktopDimensions() 
+    {
+        if (DEVMODE devMode{ .dmSize = sizeof(DEVMODE) }; EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devMode))
+            return { devMode.dmPelsWidth, devMode.dmPelsHeight };
+
+        return {};
+    }
+
     std::string wstring_to_string(const std::wstring& wstr) 
     {
         if (wstr.empty()) return {};

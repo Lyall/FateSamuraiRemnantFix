@@ -192,6 +192,17 @@ void Resolution()
             spdlog::error("Resolution List: Pattern scan failed.");
         }
 
+        // Resolution check
+        std::uint8_t* ResolutionListCheckScanResult = Memory::PatternScan(exeModule, "72 ?? 41 ?? ?? ?? ?? ?? ?? ?? 72 ?? FF ?? 41 ?? ?? 0F 82 ?? ?? ?? ??");
+        if (ResolutionListCheckScanResult) {
+            spdlog::info("Resolution Check: List: Address is {:s}+{:x}", sExeName.c_str(), ResolutionListCheckScanResult - (std::uint8_t*)exeModule);
+            Memory::PatchBytes(ResolutionListCheckScanResult, "\x90\x90", 2);
+            Memory::PatchBytes(ResolutionListCheckScanResult + 0xA, "\x90\x90", 2);
+        }
+        else {
+            spdlog::error("Resolution Check: Pattern scan failed.");
+        }
+
         // Resolution string
         std::uint8_t* ResolutionStringScanResult = Memory::PatternScan(exeModule, "48 8B ?? 45 33 ?? 4D ?? ?? 49 ?? ?? 41 ?? ?? ?? E8 ?? ?? ?? ?? 45 33 ??");
         if (ResolutionStringScanResult) {
